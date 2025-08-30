@@ -1,0 +1,24 @@
+[
+    {
+        "title": "AABC",
+        "author": "AABC",
+        "lang": "ENGLISH",
+        "genre": "STORY",
+        "is_taken": false,
+        "borrower_name": null,
+        "borrower_mobile": null,
+        "taken_date": null,
+        "submitted_date": "2025-08-29 17:28"
+    },
+    {
+        "title": "ABC",
+        "author": "ABC",
+        "lang": "TAMIL",
+        "genre": "STORY",
+        "is_taken": false,
+        "borrower_name": null,
+        "borrower_mobile": null,
+        "taken_date": null,
+        "submitted_date": "2025-08-29 17:54"
+    }
+]
