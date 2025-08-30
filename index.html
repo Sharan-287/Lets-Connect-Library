@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Library Management</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; padding: 0; }
+    header { background: #333; color: white; padding: 10px; text-align: center; }
+    nav { display: flex; justify-content: center; background: #444; flex-wrap: wrap; }
+    nav button { margin: 5px; padding: 10px; background: #666; color: white; border: none; cursor: pointer; border-radius: 5px; }
+    nav button:hover { background: #888; }
+    .container { padding: 20px; }
+    .hidden { display: none; }
+    .book { border: 1px solid #ddd; margin: 10px 0; padding: 10px; border-radius: 5px; }
+    .logout-btn { background: crimson; margin-left: 10px; }
+    /* Responsive */
+    @media (max-width: 600px) {
+      nav { flex-direction: column; }
+      nav button { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Let's Connect Library</h1>
+  </header>
+
+  <nav>
+    <button onclick="showSection('view')">View Books</button>
+    <button onclick="showSection('take')">Take Book</button>
+    <button onclick="showSection('submit')">Submit Book</button>
+    <button onclick="showAdminLogin()">Admin Login</button>
+    <button class="hidden logout-btn" id="logoutBtn" onclick="adminLogout()">Logout</button>
+  </nav>
+
+  <div class="container">
+    <!-- View Books -->
+    <div id="view" class="section">
+      <h2>Books in Library</h2>
+      <div id="books"></div>
+    </div>
+
+    <!-- Take Book -->
+    <div id="take" class="section hidden">
+      <h2>Take a Book</h2>
+      <input type="text" id="takeTitle" placeholder="Book Title">
+      <input type="text" id="takenBy" placeholder="Your Name">
+      <input type="text" id="mobile" placeholder="Mobile Number">
+      <button onclick="takeBook()">Take</button>
+    </div>
+
+    <!-- Submit Book -->
+    <div id="submit" class="section hidden">
+      <h2>Submit a Book</h2>
+      <input type="text" id="submitTitle" placeholder="Book Title">
+      <button onclick="submitBook()">Submit</button>
+    </div>
+
+    <!-- Admin Login -->
+    <div id="adminLogin" class="section hidden">
+      <h2>Admin Login</h2>
+      <input type="password" id="adminPassword" placeholder="Enter password"><br>
+      <input type="checkbox" onclick="togglePassword()"> Show Password
+      <br><br>
+      <button onclick="checkAdmin()">Login</button>
+    </div>
+
+    <!-- Admin Panel -->
+    <div id="adminPanel" class="section hidden">
+      <h2>Admin Panel</h2>
+      <h3>Add Book</h3>
+      <input type="text" id="title" placeholder="Title">
+      <input type="text" id="author" placeholder="Author">
+      <input type="text" id="lang" placeholder="Language">
+      <input type="text" id="genre" placeholder="Genre">
+      <button onclick="addBook()">Add</button>
+
+      <h3>Delete Book</h3>
+      <input type="text" id="deleteTitle" placeholder="Title">
+      <button onclick="deleteBook()">Delete</button>
+
+      <h3>📕 Taken Books (Borrower Details)</h3>
+      <div id="takenBooks"></div>
+    </div>
+  </div>
+
+  <script>
+    let isAdmin = false;
+
+    function showSection(sectionId) {
+      document.querySelectorAll(".section").forEach(sec => sec.classList.add("hidden"));
+      document.getElementById(sectionId).classList.remove("hidden");
+      if (sectionId === "view") loadBooks();
+    }
+
+    function showAdminLogin() { showSection("adminLogin"); }
+
+    function togglePassword() {
+      let pass = document.getElementById("adminPassword");
+      pass.type = pass.type === "password" ? "text" : "password";
+    }
+
+    function checkAdmin() {
+      let password = document.getElementById("adminPassword").value;
+      if (password === "Connect@1234") {
+        isAdmin = true;
+        document.getElementById("adminLogin").classList.add("hidden");
+        document.getElementById("adminPanel").classList.remove("hidden");
+        document.getElementById("logoutBtn").classList.remove("hidden");
+        alert("Admin access granted!");
+        loadBooks();
+        loadTakenBooks();
+      } else {
+        alert("Wrong password!");
+      }
+    }
+
+    function adminLogout() {
+      isAdmin = false;
+      document.getElementById("adminPanel").classList.add("hidden");
+      document.getElementById("logoutBtn").classList.add("hidden");
+      alert("Logged out!");
+      loadBooks();
+      showSection("view");
+    }
+
+    function loadBooks() {
+      fetch("/books")
+        .then(res => res.json())
+        .then(data => {
+          let booksDiv = document.getElementById("books");
+          booksDiv.innerHTML = "";
+          data.forEach(book => {
+            let div = document.createElement("div");
+            div.className = "book";
+            div.innerHTML = `
+              <strong>${book.title}</strong> by ${book.author} (${book.lang}, ${book.genre})<br>
+              Status: ${book.is_taken ? "Taken" : "Available"}
+            `;
+            booksDiv.appendChild(div);
+          });
+        });
+    }
+
+    function loadTakenBooks() {
+      fetch("/books")
+        .then(res => res.json())
+        .then(data => {
+          let takenDiv = document.getElementById("takenBooks");
+          takenDiv.innerHTML = "";
+          let takenBooks = data.filter(b => b.is_taken);
+          if (takenBooks.length === 0) {
+            takenDiv.innerHTML = "<p>No books are currently taken.</p>";
+            return;
+          }
+          takenBooks.forEach(book => {
+            let div = document.createElement("div");
+            div.className = "book";
+            div.innerHTML = `
+              <strong>${book.title}</strong> by ${book.author}<br>
+              <b>Taken By:</b> ${book.taken_by} <br>
+              <b>Mobile:</b> ${book.mobile} <br>
+              <b>Date:</b> ${book.taken_date}
+            `;
+            takenDiv.appendChild(div);
+          });
+        });
+    }
+
+    function addBook() {
+      let title = document.getElementById("title").value;
+      let author = document.getElementById("author").value;
+      let lang = document.getElementById("lang").value;
+      let genre = document.getElementById("genre").value;
+      fetch("/add_book", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title, author, lang, genre })
+      }).then(() => { loadBooks(); loadTakenBooks(); });
+    }
+
+    function deleteBook() {
+      let title = document.getElementById("deleteTitle").value;
+      fetch("/delete_book", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title })
+      }).then(() => { loadBooks(); loadTakenBooks(); });
+    }
+
+    function takeBook() {
+      let title = document.getElementById("takeTitle").value;
+      let taken_by = document.getElementById("takenBy").value;
+      let mobile = document.getElementById("mobile").value;
+      fetch("/take_book", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title, taken_by, mobile })
+      }).then(() => { loadBooks(); loadTakenBooks(); });
+    }
+
+    function submitBook() {
+      let title = document.getElementById("submitTitle").value;
+      fetch("/submit_book", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title })
+      }).then(() => { loadBooks(); loadTakenBooks(); });
+    }
+
+    showSection("view");
+  </script>
+</body>
+</html>
